@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASGARD — Askrindo Geospatial Analytics for Risk Detection</title>
+    <!-- Local Vendor CSS & Tailwind Engine -->
+    <script src="vendor/tailwind.js"></script>
+    <link rel="stylesheet" href="vendor/leaflet.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body class="asgard-dark aegis-dark h-screen flex flex-col overflow-hidden select-none text-slate-100">
+
+    <!-- Warning Banner jika dijalankan langsung via file:// protocol -->
+    <div id="protocol-warning-banner" class="hidden bg-amber-950/90 border-b border-amber-600/50 text-amber-200 px-4 py-2 text-xs flex items-center justify-between z-50">
+        <div class="flex items-center gap-2">
+            <span class="font-bold">⚠️ Mode Browser Mandiri (file://):</span>
+            <span>Aplikasi berjalan mandiri. Untuk mengaktifkan feed BMKG/PVMBG/inaRISK secara optimal, jalankan via <strong>start.bat</strong> atau buka di <strong>http://localhost:8085</strong>.</span>
+        </div>
+        <button id="btn-close-protocol-banner" class="text-amber-300 hover:text-white font-bold ml-4 text-base cursor-pointer">&times;</button>
+    </div>
+
+    <!-- ======================================================================
+         1. LOGIN OVERLAY MODAL (Sesuai PDF Hal 1 - Danantara + Askrindo)
+         ====================================================================== -->
+    <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md transition-opacity duration-300">
+        <div class="w-full max-w-md rounded-2xl asgard-panel aegis-panel p-8 shadow-2xl border border-slate-700/80 relative overflow-hidden">
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-cyan-400 to-amber-500"></div>
+
+            <!-- Logos Header: Danantara Indonesia + Askrindo Insurance -->
+            <div class="flex items-center justify-between gap-4 pb-5 mb-5 border-b border-slate-800">
+                <div class="flex items-center">
+                    <img src="assets/danantara-logo.png" alt="Danantara Indonesia" class="h-10 object-contain px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/60 shadow-sm" />
+                </div>
+
+                <div class="h-7 w-px bg-slate-700"></div>
+
+                <div class="flex items-center gap-2">
+                    <img src="assets/askrindo-logo.png" alt="Askrindo Insurance" class="h-10 object-contain bg-white/95 px-2.5 py-1 rounded-md shadow-sm" />
+                </div>
+            </div>
+
+            <div class="text-center mb-6">
+                <span class="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-500/20 text-blue-300 border border-blue-500/30 mb-2">
+                    Underwriting Geospatial Intelligence
+                </span>
+                <h1 class="text-xl font-extrabold text-white tracking-tight">ASGARD</h1>
+                <p class="text-xs text-slate-400 mt-1">Askrindo Geospatial Analytics for Risk Detection</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Username / Email Korporat</label>
+                    <input type="text" id="login-username" value="underwriter@askrindo.co.id" spellcheck="false" autocomplete="off" required
+                        style="color: #F8FAFC !important; background-color: #0F172A !important;"
+                        class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white font-medium text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="Masukkan username..." />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+                    <input type="password" id="login-password" value="asgard2026" spellcheck="false" required
+                        style="color: #F8FAFC !important; background-color: #0F172A !important;"
+                        class="w-full px-3.5 py-2.5 rounded-lg bg-slate-900 border border-slate-600 text-white font-medium text-sm focus:outline-none focus:border-blue-500"
+                        placeholder="Masukkan password..." />
+                </div>
+
+                <div class="flex items-center justify-between text-xs">
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+                        <input type="checkbox" id="login-show-pw" class="rounded border-slate-600 text-blue-600 focus:ring-0" />
+                        <span>Show password</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer text-slate-300" title="Simpan sesi aktif agar tetap login di perangkat ini">
+                        <input type="checkbox" id="login-remember" checked class="rounded border-slate-600 text-blue-600 focus:ring-0" />
+                        <span>Ingat Sesi di Perangkat</span>
+                    </label>
+                </div>
+
+                <div id="login-error" class="hidden p-2.5 rounded-lg bg-red-950/80 border border-red-700 text-red-200 text-xs"></div>
+
+                <button type="submit"
+                    class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer">
+                    <span>Login ke ASGARD</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+
+            <div class="mt-5 pt-4 border-t border-slate-800/80 text-[11px] text-slate-400 leading-relaxed">
+                <strong class="text-slate-200">Catatan Tata Kelola:</strong> Seluruh data polis dan klaim pada prototipe ini berstatus <span class="text-amber-400 font-semibold">DUMMY / DATA SIMULASI</span>. Status <span class="text-slate-200 underline">No Data</span> dipisahkan tegas dari risiko rendah. Keputusan akseptasi akhir tetap berada pada Underwriter.
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================================
+         2. TOP HORIZONTAL NAVBAR (Sesuai PDF Hal 1 - 15)
+         ====================================================================== -->
+    <header class="h-14 bg-slate-950 border-b border-slate-800 px-4 flex items-center justify-between z-30 shrink-0">
+        <!-- Left: Brand Logos & Main Navigation -->
+        <div class="flex items-center gap-6">
+            <!-- Dual Brand: Danantara + Askrindo -->
+            <div class="flex items-center gap-2.5 cursor-pointer" id="brand-home-btn" title="Kembali ke Peta Nasional">
+                <img src="assets/danantara-logo.png" alt="Danantara Indonesia" class="h-7 object-contain px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/70" />
+                <img src="assets/askrindo-logo.png" alt="Askrindo" class="h-7 object-contain bg-white px-2 py-0.5 rounded" />
+                <div class="hidden md:block leading-tight border-l border-slate-800 pl-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="font-extrabold text-sm tracking-tight text-white">ASGARD</span>
+                        <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">SIMULASI</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400">Askrindo Geospatial Analytics for Risk Detection</p>
+                </div>
+            </div>
+
+            <!-- 4 Primary Menu Items -->
+            <nav class="flex items-center gap-1">
+                <!-- Menu 1: Risk Analysis -->
+                <button id="nav-risk-analysis" data-view="analysis"
+                    class="nav-main-btn px-3 py-2 rounded-lg text-xs font-bold text-white bg-blue-600/25 border border-blue-500/40 flex items-center gap-1.5 transition cursor-pointer">
+                    <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                    <span>Risk Analysis</span>
+                </button>
+
+                <!-- Menu 2: Risk Monitoring (Dropdown 8 Sub-Menu sesuai PDF Hal 10) -->
+                <div class="relative nav-dropdown" id="dropdown-monitoring">
+                    <button id="nav-risk-monitoring"
+                        class="nav-main-btn px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-1.5 transition cursor-pointer">
+                        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                        <span>Risk Monitoring</span>
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu absolute left-0 top-full pt-1 w-64 z-50">
+                        <div class="rounded-xl aegis-panel shadow-2xl border border-slate-700 py-1.5 text-xs">
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Portfolio & Engineering</div>
+                            <button data-monitor="grading" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300 flex items-center justify-between">
+                                <span>Grading Monitoring</span>
+                                <span class="text-[10px] text-slate-400">Charts</span>
+                            </button>
+                            <button data-monitor="recommendations" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300 flex items-center justify-between">
+                                <span>Recommendations Monitoring</span>
+                                <span class="text-[10px] text-slate-400">Survey</span>
+                            </button>
+                            <div class="my-1 border-t border-slate-800"></div>
+                            <div class="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Natural Hazard Feeds</div>
+                            <button data-monitor="flood" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300">Flood Monitoring</button>
+                            <button data-monitor="sumatera_flood" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300 flex items-center justify-between">
+                                <span>Sumatera Flash Flood Monitoring</span>
+                                <span class="px-1.5 py-0.5 text-[9px] font-extrabold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">New</span>
+                            </button>
+                            <button data-monitor="earthquake" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300">Earthquake Monitoring (USGS Live)</button>
+                            <button data-monitor="landslide" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300">Landslide Monitoring</button>
+                            <button data-monitor="cyclone" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300">Tropical Cyclone Monitoring</button>
+                            <button data-monitor="volcano" class="monitor-item w-full text-left px-3.5 py-2 hover:bg-blue-600/20 hover:text-blue-300">Volcanic Eruption Monitoring</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu 3: Risk Simulation (Dropdown sesuai PDF Hal 2) -->
+                <div class="relative nav-dropdown" id="dropdown-simulation">
+                    <button id="nav-risk-simulation"
+                        class="nav-main-btn px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-1.5 transition cursor-pointer">
+                        <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                        <span>Risk Simulation</span>
+                        <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                    </button>
+                    <div class="nav-dropdown-menu absolute left-0 top-full pt-1 w-56 z-50">
+                        <div class="rounded-xl aegis-panel shadow-2xl border border-slate-700 py-1.5 text-xs">
+                            <button data-sim="Fire Risk Simulation" class="sim-item w-full text-left px-3.5 py-2 hover:bg-amber-500/20 hover:text-amber-300">Fire Risk Simulation</button>
+                            <button data-sim="Flood Risk Simulation" class="sim-item w-full text-left px-3.5 py-2 hover:bg-amber-500/20 hover:text-amber-300">Flood Risk Simulation</button>
+                            <button data-sim="Earthquake Risk Simulation" class="sim-item w-full text-left px-3.5 py-2 hover:bg-amber-500/20 hover:text-amber-300">Earthquake Risk Simulation</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Menu 4: Input Polis (Pendaftaran Polis/Objek Pertanggungan Existing ACS via Excel & Manual) -->
+                <button id="nav-acceptations" data-view="acceptations"
+                    class="nav-main-btn px-3 py-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center gap-1.5 transition cursor-pointer"
+                    title="Input Polis — Pendaftaran Objek Pertanggungan Existing (Sistem ACS)">
+                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <span>Input Polis</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Right Utility Icons: Portfolio Counter, Notifications Bell (PDF Hal 6), Profile (PDF Hal 5) -->
+        <div class="flex items-center gap-3">
+            <!-- Portfolio Summary Pill -->
+            <div class="hidden xl:flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1 rounded-lg text-xs">
+                <div>
+                    <span class="text-slate-400">Polis:</span>
+                    <strong id="header-policy-count" class="text-white ml-1">1000</strong>
+                </div>
+                <div class="h-3 w-px bg-slate-700"></div>
+                <div>
+                    <span class="text-slate-400">Total TSI:</span>
+                    <strong id="header-total-tsi" class="text-emerald-400 ml-1">Rp 0</strong>
+                </div>
+            </div>
+
+            <!-- Notifications Center Dropdown (PDF Hal 6) -->
+            <div class="relative" id="notif-container">
+                <button id="btn-notifications" class="relative p-2 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white cursor-pointer" title="Notifications Center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <span id="notif-badge" class="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-600 text-white text-[9px] font-bold flex items-center justify-center">3</span>
+                </button>
+
+                <!-- Notifications Popover (PDF Hal 6) -->
+                <div id="notif-popover" class="hidden absolute right-0 mt-2 w-80 rounded-xl aegis-panel shadow-2xl border border-slate-700 z-50 overflow-hidden">
+                    <div class="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                        <span class="text-xs font-bold text-white">Notifications Center</span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">Live Telemetry</span>
+                    </div>
+                    <div id="notif-list" class="max-h-72 overflow-y-auto divide-y divide-slate-800/80 text-xs">
+                        <!-- Dynamically populated from USGS & Policy updates -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Profile Button (PDF Hal 5) -->
+            <button id="btn-profile" class="flex items-center gap-2 pl-2 pr-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 cursor-pointer" title="My Profile">
+                <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center">
+                    UW
+                </div>
+                <div class="text-left hidden sm:block leading-tight">
+                    <div id="header-user-name" class="text-[11px] font-bold text-white">Underwriter</div>
+                    <div class="text-[9px] text-slate-400">Property Division</div>
+                </div>
+            </button>
+        </div>
+    </header>
+
+    <!-- ======================================================================
+         3. SUB-HEADER CONTEXT BAR (Breadcrumb, Search Location, Basemap, Share)
+         ====================================================================== -->
+    <div class="h-11 bg-slate-900/95 border-b border-slate-800 px-4 flex items-center justify-between gap-4 z-20 shrink-0">
+        <!-- Breadcrumb (PDF Hal 1 & 7) -->
+        <div class="flex items-center gap-2 text-xs overflow-x-auto whitespace-nowrap">
+            <button id="breadcrumb-national" class="text-blue-400 hover:underline font-semibold cursor-pointer">National Natural Hazard</button>
+            <span class="text-slate-600">&gt;</span>
+            <span id="breadcrumb-region" class="text-slate-200 font-medium">Seluruh Indonesia (1.000 Polis Portofolio)</span>
+            <span id="breadcrumb-sub" class="text-slate-400 hidden"></span>
+        </div>
+
+        <!-- Center/Right: Province Quick Jump, Location Search, Basemap Switch, Share -->
+        <div class="flex items-center gap-2">
+            <!-- Quick Jump Province -->
+            <select id="select-province-jump" class="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+                <option value="ALL">🇮🇩 Seluruh Indonesia (1.000 Polis)</option>
+                <option value="DKI Jakarta">📍 Fokus Pilot: DKI Jakarta</option>
+                <option value="Banten">Banten</option>
+                <option value="Jawa Barat">Jawa Barat</option>
+                <option value="Jawa Tengah">Jawa Tengah</option>
+                <option value="DI Yogyakarta">DI Yogyakarta</option>
+                <option value="Jawa Timur">Jawa Timur</option>
+                <option value="Aceh">Aceh</option>
+                <option value="Sumatera Utara">Sumatera Utara</option>
+                <option value="Sumatera Barat">Sumatera Barat</option>
+                <option value="Riau">Riau</option>
+                <option value="Kepulauan Riau">Kepulauan Riau</option>
+                <option value="Jambi">Jambi</option>
+                <option value="Sumatera Selatan">Sumatera Selatan</option>
+                <option value="Lampung">Lampung</option>
+                <option value="Bali">Bali</option>
+                <option value="Nusa Tenggara Barat">Nusa Tenggara Barat</option>
+                <option value="Nusa Tenggara Timur">Nusa Tenggara Timur</option>
+                <option value="Kalimantan Barat">Kalimantan Barat</option>
+                <option value="Kalimantan Selatan">Kalimantan Selatan</option>
+                <option value="Kalimantan Timur">Kalimantan Timur</option>
+                <option value="Sulawesi Selatan">Sulawesi Selatan</option>
+                <option value="Sulawesi Utara">Sulawesi Utara</option>
+                <option value="Maluku">Maluku</option>
+                <option value="Papua">Papua</option>
+            </select>
+
+            <!-- Search Location Input (Nominatim + Policy Search) -->
+            <div class="relative flex items-center">
+                <input type="text" id="global-location-search" placeholder="Search location or policy..."
+                    class="w-48 sm:w-64 bg-slate-950 border border-slate-700 rounded-lg pl-3 pr-8 py-1 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+                <button id="btn-global-search" class="absolute right-2 text-slate-400 hover:text-white cursor-pointer" title="Cari Lokasi">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </button>
+            </div>
+
+            <!-- Basemap Switcher -->
+            <div class="hidden md:flex items-center bg-slate-950 border border-slate-700 rounded-lg p-0.5 text-[11px]">
+                <button data-basemap="dark" class="basemap-btn px-2 py-0.5 rounded bg-blue-600 text-white font-semibold cursor-pointer">Dark</button>
+                <button data-basemap="satellite" class="basemap-btn px-2 py-0.5 rounded text-slate-400 hover:text-white cursor-pointer">Satellite</button>
+                <button data-basemap="osm" class="basemap-btn px-2 py-0.5 rounded text-slate-400 hover:text-white cursor-pointer">OSM</button>
+            </div>
+
+            <!-- Blue Share Button (PDF Hal 1 & 7) -->
+            <button id="btn-share-view" class="px-3 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow cursor-pointer">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
+                <span>Share</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- ======================================================================
+         4. MAIN CONTENT WORKSPACE CONTAINER
+         ====================================================================== -->
+    <main class="flex-1 relative overflow-hidden flex">
+
+        <!-- ==================================================================
+             VIEW A: RISK ANALYSIS & EVENT MONITORING MAP WORKSPACE
+             ================================================================== -->
+        <section id="workspace-map-section" class="flex-1 relative h-full flex overflow-hidden">
+
+            <!-- Floating Banner when Draw Area Mode is Active -->
+            <div id="draw-mode-banner" class="hidden absolute top-3 left-1/2 -translate-x-1/2 z-30 aegis-panel px-4 py-2 rounded-full border border-cyan-400/70 shadow-2xl flex items-center gap-3 text-xs">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></span>
+                <span class="font-bold text-cyan-200">📐 Mode Draw Rectangle Aktif: Klik &amp; tahan lalu tarik (drag) kursor di peta untuk memblok area analisis</span>
+                <button id="btn-cancel-draw-mode" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-[11px] cursor-pointer">Batal (Esc)</button>
+            </div>
+
+            <!-- A1. LEFT FLOATING ICON TOOLBAR & FILTER DRAWER (PDF Hal 2 + Draw Area Tool) -->
+            <div class="absolute left-3 top-3 z-20 flex items-start gap-2">
+                <!-- Vertical Icon Strip -->
+                <div class="aegis-panel rounded-xl p-1.5 flex flex-col gap-1.5 shadow-xl">
+                    <button id="btn-toggle-filter-drawer" class="p-2 rounded-lg bg-blue-600/30 text-blue-300 hover:bg-blue-600 hover:text-white transition cursor-pointer" title="Filter Objek & Wilayah (Policy No, Insured, Koordinat, Provinsi, Kota, Kecamatan)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    </button>
+                    <button id="btn-draw-rectangle" class="p-2 rounded-lg text-emerald-400 hover:bg-emerald-600 hover:text-white transition cursor-pointer" title="Draw Rectangle / Blok Area Analisis di Peta (Atau tahan Shift + Drag)">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 010 2H6v3a1 1 0 01-2 0V5zm16 0a1 1 0 00-1-1h-4a1 1 0 100 2h3v3a1 1 0 102 0V5zM4 19a1 1 0 001 1h4a1 1 0 100-2H6v-3a1 1 0 10-2 0v4zm16 0a1 1 0 01-1 1h-4a1 1 0 110-2h3v-3a1 1 0 112 0v4z"/></svg>
+                    </button>
+                    <button id="btn-clear-area-box" class="hidden p-2 rounded-lg text-rose-400 hover:bg-rose-600 hover:text-white transition cursor-pointer" title="Hapus Kotak Area Analisis">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    </button>
+                    <div class="h-px bg-slate-700/80 my-0.5"></div>
+                    <button id="btn-reset-indonesia" class="p-2 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition cursor-pointer" title="Reset Zoom Seluruh Indonesia">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    </button>
+                    <button id="btn-focus-jakarta" class="p-2 rounded-lg text-amber-400 hover:bg-slate-800 transition cursor-pointer" title="Fokus Pilot: DKI Jakarta">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    </button>
+                    <button id="btn-toggle-clusters" class="p-2 rounded-lg text-cyan-400 hover:bg-slate-800 transition cursor-pointer" title="Toggle Mode Cluster Wilayah / Pie Provinsi">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Slide-Out Filter & Policy Search Panel (Revisi: 1. TOC (Type Of Class), 2. Policy Number, 3. Insured Name, 4. Titik Koordinat, 5. Wilayah) -->
+                <div id="left-filter-drawer" class="hidden w-80 asgard-panel aegis-panel rounded-xl p-4 shadow-2xl max-h-[calc(100vh-140px)] flex flex-col">
+                    <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                        <div>
+                            <h3 class="text-xs font-extrabold uppercase tracking-wider text-white">Filter Objek &amp; Wilayah</h3>
+                            <p class="text-[10px] text-slate-400">Pencarian Polis, Tertanggung, Koordinat &amp; Wilayah</p>
+                        </div>
+                        <button id="btn-close-filter-drawer" class="text-slate-400 hover:text-white cursor-pointer">&times;</button>
+                    </div>
+
+                    <div class="space-y-2.5 text-xs overflow-y-auto pr-1">
+                        <!-- 1. TOC (Type Of Class) - Posisi Paling Atas Nomor 1 -->
+                        <div>
+                            <label class="block text-[11px] font-bold text-amber-300 mb-1">1. TOC (Type Of Class)</label>
+                            <select id="filter-toc" class="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-lg px-2.5 py-1.5 text-slate-100 font-semibold">
+                                <option value="">ALL — Semua Class</option>
+                                <option value="0101 PSAKI">0101 PSAKI (Kebakaran)</option>
+                                <option value="0102 PSAGBI">0102 PSAGBI (Gempa Bumi)</option>
+                                <option value="0103 PAR">0103 PAR (Properti All Risk)</option>
+                                <option value="0104 IAR">0104 IAR (Industrial All Risk)</option>
+                            </select>
+                        </div>
+
+                        <!-- 2. Policy Number -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-200 mb-1">2. Policy Number</label>
+                            <input type="text" id="filter-policy-no" placeholder="POL-ACS-2026-... atau POL-ASK-..." class="w-full bg-slate-900 border border-slate-700 focus:border-blue-400 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                        </div>
+
+                        <!-- 3. Insured Name / Nama Tertanggung -->
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-200 mb-1">3. Insured Name / Nama Tertanggung</label>
+                            <input type="text" id="filter-insured" placeholder="Cari nama perusahaan / tertanggung..." class="w-full bg-slate-900 border border-slate-700 focus:border-blue-400 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                        </div>
+
+                        <!-- 4. Titik Koordinat (Auto-Generate Wilayah Spesifik) -->
+                        <div class="p-2.5 rounded-lg bg-slate-900/90 border border-cyan-500/40 space-y-1.5">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-[11px] font-bold text-cyan-300">4. Titik Koordinat (Lat, Lon)</label>
+                                <span id="filter-coords-status" class="text-[9px] px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300 font-semibold">Auto-Detect Wilayah</span>
+                            </div>
+                            <input type="text" id="filter-coords" placeholder="-6.171709127493946, 106.86067533735722"
+                                class="w-full bg-slate-950 border border-cyan-500/50 focus:border-cyan-400 rounded-lg px-2.5 py-1.5 text-slate-100 font-mono text-[11px]" />
+                            <p class="text-[10px] text-slate-400 leading-tight">
+                                Tempel koordinat <code class="text-cyan-300">-6.171709..., 106.860675...</code> untuk auto-generate Provinsi/Kota/Kecamatan/Kelurahan &amp; fokus peta.
+                            </p>
+                        </div>
+
+                        <!-- 5. Komponen Wilayah Lainnya Mengikuti di Bawah -->
+                        <div class="pt-1 border-t border-slate-800/80">
+                            <label class="block text-[11px] text-slate-400 mb-1">Province / Provinsi</label>
+                            <select id="filter-province" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100">
+                                <option value="">Semua Provinsi</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">City / Regency</label>
+                                <input type="text" id="filter-city" placeholder="Contoh: Jakarta Pusat" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-slate-400 mb-1">District / Kecamatan</label>
+                                <input type="text" id="filter-district" placeholder="Contoh: Cempaka Putih" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Village / Kelurahan</label>
+                            <input type="text" id="filter-village" placeholder="Contoh: Cempaka Baru" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Address / Alamat</label>
+                            <input type="text" id="filter-address" placeholder="Cari jalan / kawasan..." class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100" />
+                        </div>
+                        <div class="flex gap-2 pt-1">
+                            <button id="btn-apply-filter" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer">Terapkan</button>
+                            <button id="btn-clear-filter" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Reset</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 pt-3 border-t border-slate-800 flex-1 overflow-y-auto">
+                        <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+                            <span>Daftar Objek Tertanggung</span>
+                            <span id="filtered-count-label" class="font-bold text-blue-400">1000 objek</span>
+                        </div>
+                        <div id="left-policy-list" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EVENT MONITORING FLOATING PANEL (PDF Hal 11-15: Flood, Sumatera Flash Flood, Earthquake, Landslide, Cyclone, Volcano) -->
+                <div id="event-monitoring-panel" class="hidden w-80 aegis-panel rounded-xl p-4 shadow-2xl max-h-[calc(100vh-140px)] flex flex-col">
+                    <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-800">
+                        <div>
+                            <span id="event-monitor-badge" class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-300">Real-Time & Simulasi</span>
+                            <h3 id="event-monitor-title" class="text-sm font-extrabold text-white mt-0.5">Earthquake Monitoring</h3>
+                        </div>
+                        <button id="btn-close-event-monitor" class="text-slate-400 hover:text-white text-lg leading-none cursor-pointer">&times;</button>
+                    </div>
+
+                    <!-- Time Filter & Radius Filter (Sesuai PDF Hal 11-15) -->
+                    <div class="space-y-2.5 text-xs border-b border-slate-800 pb-3 mb-3">
+                        <div>
+                            <label class="block text-[11px] text-slate-400 mb-1">Periode Waktu Kejadian</label>
+                            <select id="event-time-filter" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-100">
+                                <option value="24h">Past 24 Hours</option>
+                                <option value="3d">Past 3 Days</option>
+                                <option value="7d">Past Week</option>
+                                <option value="30d" selected>Past Month (30 Days)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between text-[11px] mb-1">
+                                <span class="text-slate-400">Radius Dampak ke Polis:</span>
+                                <strong id="event-radius-label" class="text-amber-400">50 km</strong>
+                            </div>
+                            <input type="range" id="event-radius-slider" min="5" max="150" step="5" value="50" class="w-full accent-blue-500 cursor-pointer" />
+                        </div>
+
+                        <label class="flex items-center justify-between cursor-pointer pt-1">
+                            <span class="text-slate-300 font-medium">Affected Policy Only</span>
+                            <input type="checkbox" id="event-affected-only" class="rounded border-slate-600 text-blue-600" />
+                        </label>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto space-y-2 pr-1" id="event-monitor-feed">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- A2. MAIN LEAFLET MAP CANVAS -->
+            <div id="map" class="flex-1 h-full w-full z-10"></div>
+
+            <!-- A3. RIGHT FLOATING "RISK SWITCH" PANEL & RE-OPEN PILL (Multi-Peril Stacking Heatmap & Public APIs) -->
+            <button id="btn-reopen-risk-switch" class="hidden absolute right-3 top-3 z-20 aegis-panel px-3 py-2 rounded-xl border border-slate-700 hover:border-blue-500 shadow-2xl flex items-center gap-2 text-xs font-extrabold text-white cursor-pointer transition">
+                <span>🎛️ Risk Switch</span>
+                <span id="reopen-risk-badge" class="text-[10px] px-1.5 py-0.5 rounded bg-blue-600 text-white">Aktif</span>
+            </button>
+
+            <div id="floating-risk-switch" class="absolute right-3 top-3 z-20 w-80 max-w-[90vw] aegis-panel rounded-xl p-3 shadow-2xl transition-all duration-200">
+                <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800">
+                    <div>
+                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-white">Risk Switch &amp; Heatmap</h4>
+                        <p class="text-[10px] text-slate-400">Pilih peril untuk memetakan heatmap risiko</p>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button id="btn-collapse-risk-switch" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold cursor-pointer" title="Minimize Isi Panel">_</button>
+                        <button id="btn-hide-risk-switch" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-rose-600/80 text-slate-300 hover:text-white text-[10px] font-bold cursor-pointer" title="Sembunyikan (Hide) Panel Risk Switch">&times;</button>
+                    </div>
+                </div>
+
+                <div id="risk-switch-body" class="space-y-1.5 text-xs max-h-[calc(100vh-190px)] overflow-y-auto pr-0.5">
+                    <button id="btn-peril-composite" data-peril="composite" class="w-full text-left px-2.5 py-1.5 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-between cursor-pointer transition shadow">
+                        <span>🌐 Multi-Hazard (All Combined)</span>
+                        <span id="composite-status-pill" class="text-[10px] px-1.5 py-0.5 rounded bg-white/20 text-white font-bold">Aktif</span>
+                    </button>
+
+                    <div class="flex items-center justify-between px-1 pt-1 text-[10px] text-slate-400">
+                        <span>Klik 👁️ untuk Layering / Tumpuk Risiko:</span>
+                        <div class="flex gap-1.5">
+                            <button id="btn-stack-all-perils" class="text-cyan-400 hover:underline font-bold cursor-pointer">Semua</button>
+                            <span>•</span>
+                            <button id="btn-clear-all-perils" class="text-rose-400 hover:underline font-bold cursor-pointer">Reset</button>
+                        </div>
+                    </div>
+
+                    <!-- 9 Individual Perils populated dynamically with Eye Stacking Toggles + Provider Badges -->
+                    <div id="risk-switch-peril-list" class="space-y-1 pt-0.5"></div>
+
+                    <!-- Heatmap Intensity & Layering Controls -->
+                    <div class="pt-2 mt-2 border-t border-slate-800 space-y-1.5">
+                        <div class="flex items-center justify-between px-1">
+                            <span class="text-[10px] font-bold uppercase text-amber-300">🔥 Risk Heatmap Overlay</span>
+                            <input type="checkbox" id="toggle-risk-heatmap" checked class="rounded text-blue-600 cursor-pointer" />
+                        </div>
+                        <div class="px-1">
+                            <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                                <span>Opasitas Heatmap Wilayah:</span>
+                                <span id="heatmap-opacity-label" class="text-cyan-300 font-bold">70%</span>
+                            </div>
+                            <input type="range" id="heatmap-opacity-slider" min="20" max="95" value="70" class="w-full accent-amber-500 cursor-pointer h-1.5" />
+                        </div>
+                    </div>
+
+                    <div class="pt-2 mt-1 border-t border-slate-800 space-y-1">
+                        <div class="text-[10px] font-bold uppercase text-slate-400 px-1">Overlay Vektor &amp; Telemetri</div>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer" title="Menampilkan nama provinsi, kota, kecamatan, kelurahan, dan jalan di atas peta satelit/gelap">
+                            <span class="text-[11px] text-cyan-300 font-semibold">🏷️ Label Nama Daerah &amp; Jalan</span>
+                            <input type="checkbox" id="toggle-layer-labels" checked class="rounded text-blue-600" />
+                        </label>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer">
+                            <span class="text-[11px] text-slate-300">🌊 Sungai &amp; Sumber Air (DAS)</span>
+                            <input type="checkbox" id="toggle-layer-rivers" checked class="rounded text-blue-600" />
+                        </label>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer">
+                            <span class="text-[11px] text-slate-300">⚡ Sesar Aktif (PuSGeN)</span>
+                            <input type="checkbox" id="toggle-layer-faults" checked class="rounded text-blue-600" />
+                        </label>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer">
+                            <span class="text-[11px] text-slate-300">🌋 Gunung Api (MAGMA ESDM)</span>
+                            <input type="checkbox" id="toggle-layer-volcanoes" checked class="rounded text-blue-600" />
+                        </label>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer">
+                            <span class="text-[11px] text-slate-300">🔴 Gempa (BMKG TEWS &amp; MAGMA)</span>
+                            <input type="checkbox" id="toggle-layer-usgs" checked class="rounded text-blue-600" />
+                        </label>
+                        <label class="flex items-center justify-between px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer">
+                            <span class="text-[11px] text-slate-300">🌧️ Radar Cuaca (Windy / RainViewer)</span>
+                            <input type="checkbox" id="toggle-layer-radar" class="rounded text-blue-600" />
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- A4. BOTTOM FLOATING RISK LEGEND & GOVERNANCE BANNER (PDF Hal 1 & Reference Screenshot) -->
+            <div class="absolute left-3 bottom-3 z-20 flex flex-wrap items-center gap-2 max-w-[calc(100%-24px)]">
+                <div class="aegis-panel rounded-xl px-3.5 py-2 shadow-xl flex flex-wrap items-center gap-3 text-[11px]">
+                    <span class="font-bold text-slate-300 uppercase tracking-wider text-[10px]">Risk Index</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-sky-400 inline-block"></span>
+                        <span>None (0 - 20)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+                        <span>Low (20 - 40)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-yellow-400 inline-block"></span>
+                        <span>Medium (40 - 60)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-orange-500 inline-block"></span>
+                        <span>High (60 - 80)</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                        <span>Very High (80 - 100)</span>
+                    </div>
+                    <div class="h-3.5 w-px bg-slate-700"></div>
+                    <!-- Explicit NO DATA distinction -->
+                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded badge-nodata" title="Status No Data berarti data belum tersedia/tidak valid, BUKAN berarti risiko rendah/aman.">
+                        <span class="font-bold">NO DATA ≠ Aman</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==============================================================
+                 A5. RIGHT SLIDE-OVER DRAWER: "ANALYZE AREA" MULTI-TAB (PDF Hal 7, 8, 9)
+                 ============================================================== -->
+            <aside id="analyze-area-drawer" class="hidden w-[430px] max-w-full h-full aegis-panel border-l border-slate-800 z-30 flex shadow-2xl shrink-0">
+                <!-- Left Main Drawer Content Area -->
+                <div class="flex-1 flex flex-col h-full overflow-hidden">
+                    <!-- Drawer Header -->
+                    <div class="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">Analyze Area</span>
+                                <span id="drawer-data-status-badge" class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">Simulasi + Live API</span>
+                            </div>
+                            <h3 id="drawer-panel-title" class="text-sm font-extrabold text-white mt-1">Hazard Summary</h3>
+                        </div>
+                        <button id="btn-close-analyze-drawer" class="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white cursor-pointer" title="Tutup Panel">&times;</button>
+                    </div>
+
+                    <!-- Scrollable Tab Panes Container -->
+                    <div class="flex-1 overflow-y-auto p-4 space-y-4 text-xs">
+
+                        <!-- Shared Location & Policy Identity Header Card -->
+                        <div class="aegis-card p-3 space-y-1.5">
+                            <div class="flex items-center justify-between text-[11px] text-slate-400">
+                                <span id="drawer-coords">Lon: 106.7902, Lat: -6.1256</span>
+                                <div class="flex items-center gap-2">
+                                    <button id="btn-drawer-street-view" class="px-2 py-0.5 rounded bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/40 text-cyan-300 font-bold cursor-pointer">🏢 Gedung / Street View</button>
+                                    <button id="btn-drawer-open-details" class="text-blue-400 hover:underline font-bold cursor-pointer">Full Details &rarr;</button>
+                                </div>
+                            </div>
+                            <div id="drawer-policy-no" class="text-xs font-bold text-amber-400">POL-ASK-2026-0001 • PAR (5 Tahun)</div>
+                            <div id="drawer-insured-name" class="text-sm font-extrabold text-white">PT Pelabuhan Logistik Nusantara</div>
+                            <div id="drawer-address" class="text-[11px] text-slate-300 leading-relaxed">Jl. Raya Pelabuhan Muara Baru No. 18, Pluit, Penjaringan, Jakarta Utara</div>
+                        </div>
+
+                        <!-- TAB 1: HAZARD SUMMARY (PDF Hal 7) -->
+                        <div id="drawer-tab-summary" class="drawer-tab-pane space-y-4">
+                            <!-- Natural Hazard Score Gauge Card -->
+                            <div class="aegis-card p-3.5">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div>
+                                        <div class="text-xs font-bold text-white">Natural Hazard Score</div>
+                                        <div class="text-[10px] text-slate-400">Indeks Komposit Indikatif (Multi-Peril)</div>
+                                    </div>
+                                    <span id="summary-composite-badge" class="px-2.5 py-1 rounded-full text-xs font-extrabold">High</span>
+                                </div>
+                                <div class="flex items-baseline gap-2 my-1">
+                                    <span id="summary-composite-score" class="text-3xl font-black text-white">76</span>
+                                    <span class="text-xs text-slate-400">/ 100</span>
+                                    <span id="summary-nodata-warning" class="ml-auto text-[10px] px-2 py-0.5 rounded badge-nodata">1 Peril No Data</span>
+                                </div>
+                                <div class="w-full h-2.5 bg-slate-900 rounded-full overflow-hidden mt-2">
+                                    <div id="summary-composite-bar" class="h-full bg-orange-500 rounded-full transition-all duration-300" style="width: 76%"></div>
+                                </div>
+                            </div>
+
+                            <!-- Individual Risk (9 Perils Progress List - PDF Hal 7) -->
+                            <div class="aegis-card p-3.5">
+                                <div class="flex items-center justify-between mb-2.5">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">Individual Risk (9 Perils)</h4>
+                                    <span class="text-[10px] text-slate-400">Skala 0–100 / No Data</span>
+                                </div>
+                                <div id="summary-peril-bars" class="space-y-2.5">
+                                    <!-- Populated dynamically with 9 perils -->
+                                </div>
+                            </div>
+
+                            <!-- Emergency Responses (Nearest Fire Station - PDF Hal 7) -->
+                            <div class="aegis-card p-3.5 space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">🚒 Emergency Responses</h4>
+                                    <button id="btn-show-fire-route" class="text-[11px] text-blue-400 hover:underline font-semibold cursor-pointer">Tampilkan Rute di Peta</button>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Nearest Fire Station</div>
+                                        <div id="summary-fire-station" class="font-bold text-white mt-0.5">Pos Damkar Pluit</div>
+                                    </div>
+                                    <div class="bg-slate-900/80 p-2 rounded border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Distance / Est. Duration</div>
+                                        <div id="summary-fire-dist" class="font-bold text-emerald-400 mt-0.5">1.8 km (~6 mins)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Historical Disasters (PDF Hal 7) -->
+                            <div class="aegis-card p-3.5 space-y-2">
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider">📜 Historical Disasters (Radius Lokal/Regional)</h4>
+                                <div id="summary-historical-list" class="space-y-2">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: FIRE RISK ASSESSMENT (PDF Hal 7 kanan) -->
+                        <div id="drawer-tab-fire" class="drawer-tab-pane hidden space-y-4">
+                            <div class="aegis-card p-3.5 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">🔥 Fire Risk & Exposure Radius</h4>
+                                    <span id="fire-tab-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-orange-500/20 text-orange-300">High (72)</span>
+                                </div>
+                                <p class="text-[11px] text-slate-400">Analisis kepadatan bangunan sekitar (conflagration exposure) dan jarak ke fasilitas bahan bakar (SPBU).</p>
+
+                                <!-- Radius Input + Apply (Sesuai PDF Hal 7: Radius (meters) [20] [Apply]) -->
+                                <div>
+                                    <label class="block text-[11px] text-slate-300 mb-1">Radius Analisis Kepadatan (meters)</label>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="fire-radius-input" value="20" min="10" max="500" step="10"
+                                            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-bold" />
+                                        <button id="btn-apply-fire-radius" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold cursor-pointer">Apply</button>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2 pt-1">
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Total Buildings in Radius</div>
+                                        <div id="fire-total-buildings" class="text-lg font-black text-amber-400 mt-0.5">28 Unit</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Kelas Konstruksi Objek</div>
+                                        <div id="fire-construction-class" class="text-xs font-bold text-white mt-1">Kelas 1 (Tahan Api)</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="aegis-card p-3.5 space-y-2">
+                                <h4 class="text-xs font-bold text-white uppercase tracking-wider">⛽ Nearby Gas Stations (SPBU / Depot BBM)</h4>
+                                <div id="fire-gas-stations-list" class="space-y-2">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: EARTHQUAKE RISK ASSESSMENT (PDF Hal 8 kiri) -->
+                        <div id="drawer-tab-earthquake" class="drawer-tab-pane hidden space-y-4">
+                            <div class="aegis-card p-3.5 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">📳 Earthquake Risk Assessment</h4>
+                                    <span id="eq-tab-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-300">Medium</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Events (Radius 10 km / 100 km)</div>
+                                        <div id="eq-events-count" class="text-sm font-extrabold text-white mt-0.5">0 / 2 Kejadian</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Elevation (MDPL)</div>
+                                        <div id="eq-elevation-val" class="text-sm font-extrabold text-cyan-400 mt-0.5">2.0 mdpl</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Liquefaction Potential</div>
+                                        <div id="eq-liquefaction-val" class="text-xs font-bold text-orange-400 mt-0.5">High (78/100)</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Soil Type (Klasifikasi SNI)</div>
+                                        <div id="eq-soil-type" class="text-xs font-bold text-white mt-0.5">SE - Tanah Lunak Aluvial</div>
+                                    </div>
+                                </div>
+
+                                <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                    <div class="text-[10px] text-slate-400">Jarak ke Patahan / Sesar Aktif Terdekat (PuSGeN)</div>
+                                    <div id="eq-fault-info" class="text-xs font-bold text-amber-300 mt-0.5">24.5 km dari Sesar Baribis (Segmen Jakarta-Bogor)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: LANDSLIDE RISK ASSESSMENT (PDF Hal 8 tengah) -->
+                        <div id="drawer-tab-landslide" class="drawer-tab-pane hidden space-y-4">
+                            <div class="aegis-card p-3.5 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">⛰️ Landslide Risk Assessment</h4>
+                                    <span id="ls-tab-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-300">None (8)</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2.5">
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Landslide Risk Score</div>
+                                        <div id="ls-score-val" class="text-base font-black text-white mt-0.5">8 / 100</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Slope Angle (Kemiringan)</div>
+                                        <div id="ls-slope-val" class="text-base font-black text-cyan-400 mt-0.5">1.2°</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Land Cover Type</div>
+                                        <div id="ls-landcover-val" class="text-xs font-bold text-white mt-0.5">Kawasan Industri Pelabuhan</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Soil Type</div>
+                                        <div id="ls-soil-val" class="text-xs font-bold text-white mt-0.5">Aluvial Pantai / Lempung Lunak</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 5: FLOOD RISK ASSESSMENT (PDF Hal 8 kanan & Hal 9) -->
+                        <div id="drawer-tab-flood" class="drawer-tab-pane hidden space-y-4">
+                            <div class="aegis-card p-3.5 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider">🌊 Flood Risk Assessment</h4>
+                                    <span id="fl-tab-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/20 text-red-300">Very High (92)</span>
+                                </div>
+
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Distance to Nearest River</div>
+                                        <div id="fl-river-dist" class="text-sm font-extrabold text-amber-400 mt-0.5">180 m</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Elevation from River</div>
+                                        <div id="fl-elev-river" class="text-sm font-extrabold text-cyan-400 mt-0.5">+1.5 m</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Basin Area (Luas DAS)</div>
+                                        <div id="fl-basin-area" class="text-xs font-bold text-white mt-0.5">412 km²</div>
+                                    </div>
+                                    <div class="bg-slate-900/90 p-2 rounded-lg border border-slate-800">
+                                        <div class="text-[10px] text-slate-400">Basin Name (Nama DAS)</div>
+                                        <div id="fl-basin-name" class="text-xs font-bold text-white mt-0.5">DAS Ciliwung-Muara Karang</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Chart 1: Historical Flood Events in Basin (2017-2026) - PDF Hal 8 & 9 -->
+                            <div class="aegis-card p-3.5">
+                                <div class="text-xs font-bold text-white mb-1">Historical Flood Events in Basin</div>
+                                <div class="text-[10px] text-slate-400 mb-2">Frekuensi Kejadian Banjir Tahunan pada DAS (2017–2026)</div>
+                                <div class="h-40">
+                                    <canvas id="chart-flood-history"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Chart 2: Elevation Profile (River to Site Profile) - PDF Hal 9 -->
+                            <div class="aegis-card p-3.5">
+                                <div class="text-xs font-bold text-white mb-1">Elevation Profile (River to Site Profile)</div>
+                                <div class="text-[10px] text-slate-400 mb-2">Penampang Melintang Elevasi dari Titik Sungai ke Objek (mdpl)</div>
+                                <div class="h-40">
+                                    <canvas id="chart-elevation-profile"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Right Edge Vertical Tab Strip (Sesuai PDF Hal 7-9) -->
+                <div class="w-12 bg-slate-950 border-l border-slate-800 flex flex-col items-center py-3 gap-2 shrink-0">
+                    <button data-drawer-tab="summary" title="Hazard Summary"
+                        class="drawer-tab-btn w-9 h-9 rounded-lg bg-blue-600 text-white flex items-center justify-center text-base cursor-pointer">
+                        📊
+                    </button>
+                    <button data-drawer-tab="fire" title="Fire Risk Assessment"
+                        class="drawer-tab-btn w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white flex items-center justify-center text-base cursor-pointer">
+                        🔥
+                    </button>
+                    <button data-drawer-tab="earthquake" title="Earthquake Risk Assessment"
+                        class="drawer-tab-btn w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white flex items-center justify-center text-base cursor-pointer">
+                        📳
+                    </button>
+                    <button data-drawer-tab="landslide" title="Landslide Risk Assessment"
+                        class="drawer-tab-btn w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white flex items-center justify-center text-base cursor-pointer">
+                        ⛰️
+                    </button>
+                    <button data-drawer-tab="flood" title="Flood Risk Assessment"
+                        class="drawer-tab-btn w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-white flex items-center justify-center text-base cursor-pointer">
+                        🌊
+                    </button>
+                </div>
+            </aside>
+        </section>
+
+        <!-- ==================================================================
+             VIEW B: POLICY & OBJECT DETAILS FULL VIEW (Sesuai PDF Hal 4 & 5)
+             ================================================================== -->
+        <section id="workspace-details-section" class="hidden flex-1 h-full overflow-y-auto bg-slate-950 p-6 space-y-6">
+            <div class="max-w-7xl mx-auto space-y-6">
+                <!-- Header Bar -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <div class="flex items-center gap-2 text-xs text-slate-400">
+                            <button id="btn-details-back-map" class="text-blue-400 hover:underline font-semibold cursor-pointer">&larr; Back to Risk Analysis Map</button>
+                            <span>/</span>
+                            <span>Policy &amp; Object Details</span>
+                            <span class="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-bold">DATA SIMULASI</span>
+                        </div>
+                        <h2 id="details-header-title" class="text-xl font-extrabold text-white mt-1">PT Pelabuhan Logistik Nusantara — OBJ-JKT-001</h2>
+                    </div>
+
+                    <div class="flex items-center gap-2.5">
+                        <button id="btn-details-analyze-area" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-xs cursor-pointer">
+                            📍 Analyze Area on Map
+                        </button>
+                        <button id="btn-details-export-pdf" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Export PDF ("Object Information")</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Top Row: Satellite Map with 9 Peril Badges (Left) + SI Distributions Pie Chart (Right) -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    <!-- Left 7 Cols: Satellite Map Preview + 9 Peril Top Badges (PDF Hal 4) -->
+                    <div class="lg:col-span-7 aegis-panel rounded-xl overflow-hidden flex flex-col border border-slate-800">
+                        <!-- 9 Peril Badges Bar -->
+                        <div class="p-3 bg-slate-900/95 border-b border-slate-800">
+                            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Multi-Peril Status Badges (Arahkan kursor untuk detail skor &amp; status No Data)</div>
+                            <div id="details-peril-badges" class="flex flex-wrap gap-1.5">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+                        <!-- Mini Satellite Map Container -->
+                        <div id="details-satellite-map" class="h-72 w-full bg-slate-900"></div>
+                    </div>
+
+                    <!-- Right 5 Cols: SI Distributions Pie Chart (PDF Hal 4) -->
+                    <div class="lg:col-span-5 aegis-panel rounded-xl p-5 border border-slate-800 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <h3 class="text-sm font-extrabold text-white">SI Distributions Chart</h3>
+                                <span id="details-total-tsi-badge" class="text-xs font-bold text-emerald-400">IDR 185.000.000.000</span>
+                            </div>
+                            <p class="text-xs text-slate-400 mb-4">Komposisi Nilai Pertanggungan per Komponen Objek</p>
+                        </div>
+                        <div class="h-56 flex items-center justify-center">
+                            <canvas id="chart-si-distribution"></canvas>
+                        </div>
+                        <div id="details-si-legend" class="grid grid-cols-2 gap-2 pt-3 border-t border-slate-800 text-xs">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Middle Row: Complete Details Metadata Grid (PDF Hal 4 & 5) -->
+                <div class="aegis-panel rounded-xl p-5 border border-slate-800">
+                    <h3 class="text-sm font-extrabold text-white uppercase tracking-wider pb-3 mb-4 border-b border-slate-800">Details — Object &amp; Policy Information</h3>
+                    <div id="details-metadata-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Claim History & Risk Assessment History (PDF Hal 4) -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Claim History -->
+                    <div class="aegis-panel rounded-xl p-5 border border-slate-800">
+                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Claim History</h3>
+                                <p class="text-[11px] text-slate-400">Riwayat Klaim Historis pada Objek Ini (Simulasi)</p>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-[11px] uppercase text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-2 pr-2">Claim No</th>
+                                        <th class="py-2 px-2">Date</th>
+                                        <th class="py-2 px-2">Cause</th>
+                                        <th class="py-2 px-2">Amount</th>
+                                        <th class="py-2 pl-2">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="details-claim-tbody" class="divide-y divide-slate-800/70">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Risk Assessment & Underwriter Decision -->
+                    <div class="aegis-panel rounded-xl p-5 border border-slate-800">
+                        <div class="flex items-center justify-between pb-3 mb-3 border-b border-slate-800">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Risk Assessment &amp; Underwriter Decision</h3>
+                                <p class="text-[11px] text-slate-400">Keputusan akhir akseptasi tetap merupakan kewenangan Underwriter</p>
+                            </div>
+                            <button id="btn-add-assessment" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer">
+                                + Add a New Risk Assessment
+                            </button>
+                        </div>
+
+                        <!-- Add Assessment Inline Form (Hidden by default) -->
+                        <form id="form-add-assessment" class="hidden mb-4 p-3.5 rounded-lg bg-slate-900 border border-slate-700 space-y-3 text-xs">
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Assessor / Underwriter</label>
+                                    <input type="text" id="ass-assessor" value="Senior Underwriter Askrindo" required class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white" />
+                                </div>
+                                <div>
+                                    <label class="block text-slate-400 mb-1">Risk Grading &amp; Keputusan</label>
+                                    <select id="ass-grade" class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white">
+                                        <option value="A - Standard Acceptance">Grade A — Standard Acceptance</option>
+                                        <option value="B - Conditional (Standard Deductible)">Grade B — Conditional Acceptance</option>
+                                        <option value="C - Sub-limit & Higher Deductible" selected>Grade C — Sub-limit &amp; Higher Deductible</option>
+                                        <option value="D - Refer to Senior Committee / Decline">Grade D — Refer / Decline</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 mb-1">Rekomendasi Engineering &amp; Syarat Underwriting</label>
+                                <textarea id="ass-notes" rows="2" required placeholder="Contoh: Wajib klausul Flood Deductible 10% dari nilai klaim, pemasangan tanggul pompa..." class="w-full bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-white"></textarea>
+                            </div>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" id="btn-cancel-assessment" class="px-3 py-1 rounded bg-slate-800 text-slate-300 cursor-pointer">Batal</button>
+                                <button type="submit" class="px-3.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer">Simpan Assessment</button>
+                            </div>
+                        </form>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-[11px] uppercase text-slate-400 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-2 pr-2">Date</th>
+                                        <th class="py-2 px-2">Assessor</th>
+                                        <th class="py-2 px-2">Grade</th>
+                                        <th class="py-2 px-2">Recommendation Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="details-assessment-tbody" class="divide-y divide-slate-800/70">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW C: INPUT POLIS — PENDAFTARAN OBJEK PERTANGGUNGAN EXISTING (SISTEM ACS)
+             ================================================================== -->
+        <section id="workspace-acceptations-section" class="hidden flex-1 h-full overflow-y-auto bg-slate-950 p-6">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Integrasi Portofolio ACS (Askrindo Core System)</span>
+                        <h2 class="text-xl font-extrabold text-white mt-1">Input Polis — Pendaftaran Objek Pertanggungan Existing (ACS)</h2>
+                        <p class="text-xs text-slate-400">Daftarkan objek pertanggungan yang telah menjadi nasabah Askrindo melalui Sistem ACS (baik unggah jadwal Excel disertai <strong class="text-amber-300">Policy Number</strong> maupun input titik koordinat manual) untuk pemetaan &amp; pemantauan georisiko di ASGARD.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="tab-btn-acc-excel" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-bold text-xs cursor-pointer">1. Upload Excel (Batch)</button>
+                        <button id="tab-btn-acc-manual" class="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 hover:text-white font-semibold text-xs cursor-pointer">2. Input Manual Individu</button>
+                    </div>
+                </div>
+
+                <!-- Sub-pane 1: Excel Upload Stepper (1. Upload File -> 2. Preview Data dengan Kolom Wajib Policy Number) -->
+                <div id="acc-pane-excel" class="space-y-6">
+                    <!-- Stepper Header -->
+                    <div class="flex items-center gap-4 aegis-panel p-4 rounded-xl border border-slate-800">
+                        <div class="flex items-center gap-2.5">
+                            <span id="step-circle-1" class="w-7 h-7 rounded-full bg-blue-600 text-white font-extrabold text-xs flex items-center justify-center">1</span>
+                            <div>
+                                <div class="text-xs font-bold text-white">Upload File</div>
+                                <div class="text-[10px] text-slate-400">Pilih file .xlsx / .xls (Wajib Policy Number + 9 kolom lokasi)</div>
+                            </div>
+                        </div>
+                        <div class="h-px w-12 bg-slate-700"></div>
+                        <div class="flex items-center gap-2.5">
+                            <span id="step-circle-2" class="w-7 h-7 rounded-full bg-slate-800 text-slate-400 font-extrabold text-xs flex items-center justify-center">2</span>
+                            <div>
+                                <div class="text-xs font-bold text-slate-300">Preview Data &amp; Geocoding Check</div>
+                                <div class="text-[10px] text-slate-400">Validasi Policy Number &amp; koordinat lalu simpan ke peta</div>
+                            </div>
+                        </div>
+                        <div class="ml-auto flex items-center gap-2">
+                            <button id="btn-download-excel-template" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300 font-bold text-xs flex items-center gap-1.5 cursor-pointer">
+                                📥 Download Template Excel (Policy Number + 10 Kolom)
+                            </button>
+                            <button id="btn-load-sample-batch" class="px-3.5 py-2 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer">
+                                ⚡ Muat Data Contoh Instan
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dropzone Card -->
+                    <div class="aegis-panel rounded-xl p-8 border-2 border-dashed border-slate-700 hover:border-blue-500 transition text-center space-y-3">
+                        <div class="w-12 h-12 rounded-full bg-blue-600/20 text-blue-400 flex items-center justify-center mx-auto text-2xl">📄</div>
+                        <div class="text-sm font-bold text-white">Pilih atau Tarik File Excel Daftar Polis Existing ACS (.xlsx / .xls)</div>
+                        <p class="text-xs text-slate-400 max-w-2xl mx-auto">
+                            Format kolom wajib: <code class="text-amber-300 font-bold">Policy Number</code>, diikuti <code class="text-cyan-300">Type of Class (TOC), Occupation Code, Village, Sub District, City/Regency, Province, Postal Code, Geo - Longitude, Geo - Latitude, Sum Insured</code>
+                        </p>
+                        <div class="pt-2">
+                            <input type="file" id="input-acceptation-excel" accept=".xlsx,.xls,.csv" class="hidden" />
+                            <label for="input-acceptation-excel" class="inline-block px-5 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer shadow-lg">
+                                Pilih File Excel dari Komputer
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Preview Data Table (Step 2) -->
+                    <div id="excel-preview-container" class="hidden aegis-panel rounded-xl p-5 border border-slate-800 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-extrabold text-white">Step 2: Preview Data Polis Existing (ACS)</h3>
+                                <p id="excel-preview-summary" class="text-xs text-slate-400">Menampilkan baris polis yang berhasil dibaca di browser.</p>
+                            </div>
+                            <button id="btn-commit-excel-rows" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg cursor-pointer">
+                                ✅ Simpan Semua Polis Valid ke Peta &amp; Portofolio
+                            </button>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-xs">
+                                <thead class="text-[11px] uppercase text-slate-400 bg-slate-900/90 border-b border-slate-800">
+                                    <tr>
+                                        <th class="py-2.5 px-3">#</th>
+                                        <th class="py-2.5 px-3 text-amber-300">Policy Number *</th>
+                                        <th class="py-2.5 px-3 text-cyan-300">Type of Class</th>
+                                        <th class="py-2.5 px-3 text-slate-200">Occupation Code</th>
+                                        <th class="py-2.5 px-3">Village / Sub District</th>
+                                        <th class="py-2.5 px-3">City / Province</th>
+                                        <th class="py-2.5 px-3">Postal</th>
+                                        <th class="py-2.5 px-3">Longitude, Latitude</th>
+                                        <th class="py-2.5 px-3">Sum Insured (IDR)</th>
+                                        <th class="py-2.5 px-3">Status Validasi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="excel-preview-tbody" class="divide-y divide-slate-800"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sub-pane 2: Manual Single Object Input (Pendaftaran Objek Pertanggungan Existing dari Sistem ACS) -->
+                <div id="acc-pane-manual" class="hidden aegis-panel rounded-xl p-6 border border-slate-800">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800">
+                        <div>
+                            <h3 class="text-sm font-extrabold text-white">Input Manual Objek Pertanggungan / Polis Existing (Sistem ACS)</h3>
+                            <p class="text-[11px] text-slate-400">Daftarkan objek pertanggungan yang telah menjadi nasabah Askrindo di Sistem ACS namun belum masuk otomatis ke ASGARD. Copy-paste titik koordinat <code class="text-cyan-300">(Latitude, Longitude)</code> untuk auto-generate Provinsi/Kota/Kecamatan.</p>
+                        </div>
+                        <span id="man-coord-geocode-badge" class="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
+                            📍 Auto-Detect Wilayah Aktif
+                        </span>
+                    </div>
+
+                    <form id="form-manual-acceptation" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                        <div>
+                            <label class="block text-amber-300 font-bold mb-1">Policy Number (ACS) *</label>
+                            <input type="text" id="man-policy-no" value="POL-ACS-2026-001001" required placeholder="POL-ACS-2026-..." class="w-full bg-slate-900 border border-amber-500/50 focus:border-amber-400 rounded-lg px-3 py-2 text-white font-semibold" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Insured Name / Nama Tertanggung (ACS) *</label>
+                            <input type="text" id="man-insured" required placeholder="PT Contoh Properti Indonesia" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Type of Class (TOC) *</label>
+                            <select id="man-toc" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-semibold">
+                                <option value="0101 PSAKI">0101 PSAKI — Kebakaran</option>
+                                <option value="0102 PSAGBI">0102 PSAGBI — Gempa Bumi</option>
+                                <option value="0103 PAR" selected>0103 PAR — Properti All Risk</option>
+                                <option value="0104 IAR">0104 IAR — Industrial All Risk</option>
+                            </select>
+                            <input type="hidden" id="man-rbc" value="RBC-1099-JKT" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Occupation Code (SEOJK No. 6/2017) *</label>
+                            <select id="man-occupation" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs">
+                                <option value="2971">2971 — Apartments, offices &lt;= 6 storeys</option>
+                                <option value="2972">2972 — Apartments, offices 6 to 18 storeys</option>
+                                <option value="2976">2976 — Dwelling houses &lt;= 3 storeys</option>
+                                <option value="29311">29311 — Department stores (&gt;200m2)</option>
+                                <option value="29313">29313 — Shopping mall / center</option>
+                                <option value="29371">29371 — Private Warehouses</option>
+                                <option value="29383">29383 — Petrol / Diesel Fuel Stations (SPBU)</option>
+                                <option value="29412">29412 — Hotel certified 3-star and above</option>
+                                <option value="2951">2951 — Hospitals, Medical Clinics</option>
+                                <option value="29291">29291 — Data Center</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Durasi Pertanggungan *</label>
+                            <input type="text" id="man-duration" value="5 Tahun (17 Oktober 2026 – 17 Oktober 2031)" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+
+                        <!-- Unified Coordinate Input (Latitude, Longitude) + Total Sum Insured -->
+                        <div class="md:col-span-2">
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-cyan-300 font-bold">Titik Koordinat Gabungan (Latitude, Longitude) — Standar Google Maps *</label>
+                                <span id="man-coord-parsed-hint" class="text-[10px] font-mono text-emerald-400">Lat: -6.171460, Lon: 106.860483</span>
+                            </div>
+                            <input type="text" id="man-coords-unified" value="-6.17146028243549, 106.86048342205949" required
+                                placeholder="Contoh: -6.17146028243549, 106.86048342205949"
+                                class="w-full bg-slate-900 border-2 border-cyan-500/60 focus:border-cyan-400 rounded-lg px-3 py-2 text-white font-mono" />
+                            <!-- Hidden inputs preserved for backward compatibility -->
+                            <input type="hidden" id="man-lat" value="-6.17146028243549" />
+                            <input type="hidden" id="man-lon" value="106.86048342205949" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Total Sum Insured (IDR) *</label>
+                            <input type="number" id="man-tsi" value="75000000000" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-bold" />
+                        </div>
+
+                        <!-- Auto-Populated Administrative Fields from Coordinate -->
+                        <div>
+                            <label class="block text-slate-400 mb-1">Province (Otomatis dari Koordinat) *</label>
+                            <input type="text" id="man-province" value="DKI Jakarta" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">City / Regency (Otomatis dari Koordinat) *</label>
+                            <input type="text" id="man-city" value="Jakarta Pusat" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                        <div>
+                            <label class="block text-slate-400 mb-1">Sub District / Village (Kecamatan / Kelurahan)</label>
+                            <input type="text" id="man-village" value="Cempaka Putih / Cempaka Baru" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+
+                        <div class="md:col-span-3">
+                            <label class="block text-slate-400 mb-1">Alamat Lengkap Objek Pertanggungan (Terbaca Otomatis / Dapat Diedit)</label>
+                            <input type="text" id="man-address" value="Jl. Cempaka Baru Timur, Cempaka Putih, Jakarta Pusat, DKI Jakarta" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+                        </div>
+                        <div class="md:col-span-3 flex flex-wrap items-center justify-between gap-3 pt-2">
+                            <button type="button" id="btn-man-preview-building" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-600 text-cyan-300 font-bold text-xs cursor-pointer">
+                                🏢 Preview Tampilan Gedung / Street View Titik Ini
+                            </button>
+                            <button type="submit" class="px-5 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer shadow-lg">
+                                Daftarkan Polis ACS &amp; Evaluasi 9-Peril ke Peta ASGARD
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================================================================
+             VIEW D: GRADING & RECOMMENDATIONS MONITORING DASHBOARD (PDF Hal 10)
+             ================================================================== -->
+        <section id="workspace-grading-section" class="hidden flex-1 h-full overflow-y-auto bg-slate-950 p-6">
+            <div class="max-w-7xl mx-auto space-y-6">
+                <!-- Header & Year Filter -->
+                <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-800">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300">Risk Monitoring Dashboard</span>
+                        <h2 id="grading-dashboard-title" class="text-xl font-extrabold text-white mt-1">Grading &amp; Recommendations Monitoring</h2>
+                        <p class="text-xs text-slate-400">Pemantauan distribusi kategori risiko portofolio, tren rekomendasi risk engineering, dan status penyelesaian (PDF Hal 10).</p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <label class="text-slate-400">Select Year:</label>
+                        <select id="grading-year-filter" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white">
+                            <option value="ALL">All Years (2024–2026)</option>
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                        </select>
+                        <button id="btn-grading-back-map" class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold cursor-pointer">
+                            Kembali ke Peta
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4 Charts Grid (Sesuai PDF Hal 10) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="aegis-panel rounded-xl p-4 border border-slate-800">
+                        <div class="text-xs font-bold text-white mb-1">Risk Category Distribution</div>
+                        <div class="text-[10px] text-slate-400 mb-2">Jumlah Polis per Kelas Risiko</div>
+                        <div class="h-44"><canvas id="chart-mon-category-bar"></canvas></div>
+                    </div>
+                    <div class="aegis-panel rounded-xl p-4 border border-slate-800">
+                        <div class="text-xs font-bold text-white mb-1">Policy Count by Category</div>
+                        <div class="text-[10px] text-slate-400 mb-2">Proporsi Portofolio (%)</div>
+                        <div class="h-44"><canvas id="chart-mon-category-pie"></canvas></div>
+                    </div>
+                    <div class="aegis-panel rounded-xl p-4 border border-slate-800">
+                        <div class="text-xs font-bold text-white mb-1">Recommendations Trend</div>
+                        <div class="text-[10px] text-slate-400 mb-2">Tren Temuan Risk Engineering</div>
+                        <div class="h-44"><canvas id="chart-mon-rec-trend"></canvas></div>
+                    </div>
+                    <div class="aegis-panel rounded-xl p-4 border border-slate-800">
+                        <div class="text-xs font-bold text-white mb-1">Completion Status</div>
+                        <div class="text-[10px] text-slate-400 mb-2">Tindak Lanjut Rekomendasi (%)</div>
+                        <div class="h-44"><canvas id="chart-mon-completion"></canvas></div>
+                    </div>
+                </div>
+
+                <!-- Policy List Table (PDF Hal 10 bawah) -->
+                <div class="aegis-panel rounded-xl p-5 border border-slate-800 space-y-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="text-sm font-extrabold text-white">Policy List &amp; Risk Engineering Status</h3>
+                        <input type="text" id="grading-table-search" placeholder="Cari nomor polis atau nama tertanggung..."
+                            class="w-64 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white" />
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="text-[11px] uppercase text-slate-400 bg-slate-900/90 border-b border-slate-800">
+                                <tr>
+                                    <th class="py-2.5 px-3">Policy Number</th>
+                                    <th class="py-2.5 px-3">Object Code</th>
+                                    <th class="py-2.5 px-3">Insured Name</th>
+                                    <th class="py-2.5 px-3">Province / City</th>
+                                    <th class="py-2.5 px-3">Sum Insured</th>
+                                    <th class="py-2.5 px-3">Risk Category</th>
+                                    <th class="py-2.5 px-3">Completion</th>
+                                    <th class="py-2.5 px-3">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="grading-policy-tbody" class="divide-y divide-slate-800"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ======================================================================
+         5. MODALS: RISK SIMULATION (PDF Hal 2) & MY PROFILE (PDF Hal 5)
+         ====================================================================== -->
+
+    <!-- Modal A: Risk Simulation (Coming Soon + Interactive Buffer Simulator) -->
+    <div id="modal-simulation" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="w-full max-w-lg rounded-2xl aegis-panel p-6 border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">⚡</span>
+                    <div>
+                        <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">Coming Soon (Tahap Lanjutan)</span>
+                        <h3 id="sim-modal-title" class="text-base font-extrabold text-white mt-0.5">Flood Risk Simulation</h3>
+                    </div>
+                </div>
+                <button id="btn-close-sim-modal" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 space-y-2 leading-relaxed">
+                <p><strong class="text-white">Pemberitahuan Sistem (Sesuai Panel Interface Hal. 2):</strong> Modul pemodelan fisika hidrodinamika/seismik 3D penuh berstatus <span class="text-amber-400 font-bold">Coming Soon</span> untuk menjaga kepatuhan biaya <span class="text-cyan-300">Zero-Cost Spark Tier</span>.</p>
+                <p>Namun, Anda dapat langsung menjalankan <strong>Simulasi Radius Eksposur Akumulasi Portofolio (Turf.js Buffer)</strong> di bawah ini pada titik objek aktif untuk menghitung jumlah polis dan akumulasi TSI terdampak.</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-slate-400">Radius Simulasi Akumulasi Dampak (km):</span>
+                        <strong id="sim-buffer-km-label" class="text-amber-400">5 km</strong>
+                    </div>
+                    <input type="range" id="sim-buffer-slider" min="1" max="50" value="5" class="w-full accent-amber-500 cursor-pointer" />
+                </div>
+
+                <div id="sim-result-box" class="p-3 rounded-lg bg-slate-900 border border-slate-800 grid grid-cols-2 gap-3">
+                    <div>
+                        <div class="text-[10px] text-slate-400">Polis Terdampak dalam Radius</div>
+                        <div id="sim-affected-count" class="text-base font-black text-white mt-0.5">3 Polis</div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-slate-400">Total Akumulasi TSI Terpapar</div>
+                        <div id="sim-affected-tsi" class="text-sm font-extrabold text-amber-400 mt-0.5">Rp 0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button id="btn-sim-draw-on-map" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs cursor-pointer">
+                    Tampilkan Zona Radius di Peta
+                </button>
+                <button id="btn-close-sim-modal-2" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs cursor-pointer">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal B: My Profile (Sesuai PDF Hal 5) -->
+    <div id="modal-profile" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div class="w-full max-w-md rounded-2xl aegis-panel p-6 border border-slate-700 shadow-2xl space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 class="text-base font-extrabold text-white">My Profile — ASGARD Underwriter</h3>
+                <button id="btn-close-profile-modal" class="text-slate-400 hover:text-white text-xl cursor-pointer">&times;</button>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="w-14 h-14 rounded-full bg-blue-600 text-white font-black text-xl flex items-center justify-center shadow-lg">
+                    UW
+                </div>
+                <div>
+                    <div id="profile-modal-name" class="text-base font-bold text-white">Underwriter Property Askrindo</div>
+                    <div id="profile-modal-email" class="text-xs text-slate-400">underwriter@askrindo.co.id</div>
+                    <span class="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">Role: Senior Property Underwriter</span>
+                </div>
+            </div>
+
+            <div class="space-y-2 text-xs bg-slate-900/90 p-3.5 rounded-xl border border-slate-800">
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                    <span class="text-slate-400">Entitas Induk / Holding</span>
+                    <span class="font-bold text-white">Danantara Indonesia — IFG</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                    <span class="text-slate-400">Perusahaan</span>
+                    <span class="font-bold text-white">PT Asuransi Kredit Indonesia (Askrindo)</span>
+                </div>
+                <div class="flex justify-between py-1 border-b border-slate-800">
+                    <span class="text-slate-400">Cakupan Geografis</span>
+                    <span class="font-bold text-cyan-300">Seluruh Indonesia (Fokus Pilot DKI Jakarta)</span>
+                </div>
+                <div class="flex justify-between py-1">
+                    <span class="text-slate-400">Arsitektur Biaya</span>
+                    <span class="font-bold text-amber-300">Zero-Cost Client-Side &amp; Public Telemetry</span>
+                </div>
+            </div>
+
+            <div class="flex justify-between items-center pt-2">
+                <button id="btn-logout" class="px-4 py-2 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/40 text-red-300 font-bold text-xs cursor-pointer">
+                    Logout Session
+                </button>
+                <button id="btn-close-profile-modal-2" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold cursor-pointer">
+                    Tutup
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal C: Google Street View & Building Inspector Modal -->
+    <div id="modal-street-view" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-sm p-3 md:p-6">
+        <div class="w-full max-w-5xl h-[85vh] rounded-2xl aegis-panel border border-slate-700 shadow-2xl flex flex-col overflow-hidden">
+            <!-- Top Dark Bar (Matching Google Street View Card Header) -->
+            <div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/40 flex items-center justify-center text-lg">🏢</div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h3 id="sv-modal-title" class="text-sm font-extrabold text-white">Tampilan Gedung &amp; Lingkungan Sekitar</h3>
+                            <span class="px-2 py-0.5 rounded bg-blue-600/30 text-blue-300 text-[10px] font-bold">Google Street View &amp; Public Maps</span>
+                        </div>
+                        <p id="sv-modal-address" class="text-[11px] text-slate-400 truncate max-w-2xl">Memuat alamat objek...</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-xs">
+                    <span id="sv-modal-coords" class="font-mono text-cyan-300 bg-slate-900 px-2.5 py-1 rounded border border-slate-800">-6.171460, 106.860483</span>
+                    <button id="btn-sv-mode-street" class="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold cursor-pointer">Street View 360&deg;</button>
+                    <button id="btn-sv-mode-sat" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold cursor-pointer">Satellite &amp; Building Footprint</button>
+                    <a id="btn-sv-external-gmaps" href="#" target="_blank" rel="noopener noreferrer"
+                       class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center gap-1">
+                        <span>Buka Full Google Street View &nearr;</span>
+                    </a>
+                    <button id="btn-close-sv-modal" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white font-bold text-base cursor-pointer">&times;</button>
+                </div>
+            </div>
+
+            <!-- Main Interactive Street View / Building Frame -->
+            <div class="flex-1 relative bg-slate-950 overflow-hidden">
+                <iframe id="sv-iframe" class="w-full h-full border-0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+                <!-- Floating Top-Left Street View Overlay Card (Matching User Reference Screenshot) -->
+                <div class="absolute top-4 left-4 z-10 max-w-xs rounded-xl bg-slate-950/90 backdrop-blur-md border border-slate-700/90 p-3.5 shadow-2xl text-xs pointer-events-auto">
+                    <div id="sv-card-heading" class="font-extrabold text-white text-sm leading-snug">Gedung / Lokasi Objek Polis</div>
+                    <div id="sv-card-sub" class="text-[11px] text-slate-300 mt-0.5">DKI Jakarta, Indonesia</div>
+                    <div class="flex items-center gap-2 mt-2 pt-2 border-t border-slate-800 text-[11px] text-blue-400 font-semibold">
+                        <span>🌐 Google Street View / Public Maps</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Banner -->
+    <div id="aegis-toast" class="hidden fixed bottom-5 right-5 z-50 px-4 py-2.5 rounded-xl bg-slate-900 border border-blue-500/60 text-white text-xs font-semibold shadow-2xl"></div>
+
+    <!-- Local Vendor Scripts -->
+    <script src="vendor/leaflet.js"></script>
+    <script src="vendor/turf.min.js"></script>
+    <script src="vendor/chart.min.js"></script>
+    <script src="vendor/xlsx.full.min.js"></script>
+    <script src="vendor/jspdf.umd.min.js"></script>
+    <script src="vendor/jspdf.plugin.autotable.min.js"></script>
+
+    <!-- AEGIS Application Scripts -->
+    <script src="js/data.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

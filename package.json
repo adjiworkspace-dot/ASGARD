@@ -1,0 +1,21 @@
+{
+  "name": "asgard-georisk",
+  "version": "3.2.0",
+  "description": "Askrindo Geospatial Analytics for Risk Detection (ASGARD)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "askrindo",
+    "geospatial",
+    "risk-analysis",
+    "underwriting",
+    "danantara"
+  ],
+  "author": "PT Asuransi Kredit Indonesia",
+  "license": "ISC"
+}
