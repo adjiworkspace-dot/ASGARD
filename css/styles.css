@@ -1,0 +1,690 @@
+/* ==========================================================================
+   ASKRINDO GEORISK - CUSTOM STYLES
+   Brand Colors: Navy Blue (#1B2A4A), White (#FFFFFF), Vibrant Orange (#E87722)
+   ========================================================================== */
+
+:root {
+  --askrindo-navy: #1B2A4A;
+  --askrindo-dark-navy: #101B30;
+  --askrindo-light-navy: #243B66;
+  --askrindo-orange: #E87722;
+  --askrindo-light-orange: #FF8A3D;
+  --askrindo-dark-orange: #C95E12;
+  --askrindo-white: #FFFFFF;
+  --askrindo-gray-bg: #F8FAFC;
+  --askrindo-card-border: #E2E8F0;
+  --risk-high: #EF4444;
+  --risk-med: #F59E0B;
+  --risk-low: #10B981;
+}
+
+html, body {
+  height: 100vh !important;
+  width: 100vw !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  color: #1E293B;
+  background-color: var(--askrindo-gray-bg);
+}
+
+/* ==========================================================================
+   LOADING SCREEN (HIGH-TECH ASKRINDO RADAR INITIALIZER)
+   ========================================================================== */
+#app-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: radial-gradient(circle at center, #1B2A4A 0%, #0B1323 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s ease;
+}
+
+#app-loading-screen.hidden-loader {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  display: none !important;
+}
+
+/* Radar Orbital Scan Container */
+.radar-scanner-box {
+  position: relative;
+  width: 200px;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radar-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(232, 119, 34, 0.25);
+  box-shadow: 0 0 20px rgba(27, 42, 74, 0.5);
+  animation: radarPulse 3s infinite ease-out;
+}
+
+.radar-ring-1 { width: 140px; height: 140px; animation-delay: 0s; }
+.radar-ring-2 { width: 180px; height: 180px; animation-delay: 1s; }
+.radar-ring-3 { width: 220px; height: 220px; animation-delay: 2s; border-color: rgba(255, 255, 255, 0.15); }
+
+.radar-sweep-beam {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  top: 0;
+  right: 0;
+  background: conic-gradient(from 0deg, rgba(232, 119, 34, 0.4) 0deg, transparent 60deg);
+  border-radius: 100% 0 0 0;
+  transform-origin: 0% 100%;
+  animation: radarRotate 2.5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes radarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes radarPulse {
+  0% { transform: scale(0.85); opacity: 0.8; }
+  50% { transform: scale(1.05); opacity: 0.3; }
+  100% { transform: scale(0.85); opacity: 0.8; }
+}
+
+.logo-glow-card {
+  position: relative;
+  z-index: 10;
+  background: #FFFFFF;
+  padding: 18px 24px;
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(232, 119, 34, 0.35);
+  animation: floatCard 3s ease-in-out infinite;
+}
+
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+/* Loading Progress Bar */
+.loading-progress-track {
+  width: 320px;
+  max-width: 85vw;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #E87722 0%, #FF9E54 100%);
+  border-radius: 999px;
+  transition: width 0.35s ease;
+  box-shadow: 0 0 12px #E87722;
+}
+
+/* ==========================================================================
+   CRITICAL TAILWIND FIX FOR LEAFLET TILES & CONTAINER
+   Tailwind's img { max-width: 100%; height: auto; } completely distorts Leaflet tiles!
+   ========================================================================== */
+.leaflet-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  background-color: #e5e9ec !important;
+}
+
+.leaflet-container img {
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.leaflet-tile-container img,
+.leaflet-tile {
+  max-width: none !important;
+  max-height: none !important;
+  width: 256px !important;
+  height: 256px !important;
+}
+
+.leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-top,
+.leaflet-bottom {
+  z-index: 1000;
+}
+
+#map-wrapper {
+  position: relative !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: calc(100vh - 60px) !important;
+  flex: 1 1 0% !important;
+  overflow: hidden !important;
+}
+
+#map {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: calc(100vh - 60px) !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1 !important;
+  background-color: #0F172A !important;
+}
+
+/* ==========================================================================
+   MINIMALIST MODERN MARKERS
+   ========================================================================== */
+.policy-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 12px;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.3), 0 0 0 2px rgba(255, 255, 255, 0.95);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+.policy-marker-pin:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}
+
+.policy-marker-pin.risk-tinggi {
+  background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45), 0 0 0 2px #FFFFFF;
+}
+.policy-marker-pin.risk-sedang {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.45), 0 0 0 2px #FFFFFF;
+}
+.policy-marker-pin.risk-rendah {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.45), 0 0 0 2px #FFFFFF;
+}
+
+/* Volcano Marker Pin */
+.volcano-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 13px;
+  background: linear-gradient(135deg, #EA580C 0%, #9A3412 100%);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.volcano-marker-pin:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}
+
+/* Landslide Marker Pin */
+.landslide-marker-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  color: #FFFFFF;
+  font-size: 12px;
+  background: linear-gradient(135deg, #B45309 0%, #78350F 100%);
+  box-shadow: 0 4px 12px rgba(180, 83, 9, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.landslide-marker-pin:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}
+
+/* Flood Basin Pin */
+.flood-basin-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #FFFFFF;
+  font-size: 12px;
+  background: linear-gradient(135deg, #0284C7 0%, #0369A1 100%);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.95);
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.flood-basin-pin:hover {
+  transform: scale(1.25);
+  z-index: 1000 !important;
+}
+.flood-basin-pin.pin-bandang {
+  background: linear-gradient(135deg, #DC2626 0%, #991B1B 100%);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+.flood-basin-pin.pin-luapan {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+.flood-basin-pin.pin-genangan {
+  background: linear-gradient(135deg, #4F46E5 0%, #3730A3 100%);
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+.flood-basin-pin.pin-lahar {
+  background: linear-gradient(135deg, #EA580C 0%, #C2410C 100%);
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+.flood-basin-pin.pin-rob {
+  background: linear-gradient(135deg, #0D9488 0%, #0F766E 100%);
+  box-shadow: 0 4px 14px rgba(13, 148, 136, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.95);
+}
+
+/* Earthquake Ripple Marker */
+.quake-ripple-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.quake-core-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #EF4444;
+  border: 2px solid #FFFFFF;
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+  z-index: 2;
+}
+.quake-wave {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(239, 68, 68, 0.6);
+  animation: quakeWavePulse 2.2s infinite ease-out;
+  pointer-events: none;
+}
+@keyframes quakeWavePulse {
+  0% { transform: scale(0.6); opacity: 1; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* Minimalist Clean Leaflet Popup */
+.leaflet-popup-content-wrapper {
+  padding: 0 !important;
+  border-radius: 18px !important;
+  overflow: hidden !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(226, 232, 240, 0.8) !important;
+  border: none !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(16px) !important;
+}
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+.leaflet-popup-tip-container {
+  display: none !important;
+}
+
+/* ==========================================================================
+   MINIMALIST MODERN UI COMPONENTS
+   ========================================================================== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #E2E8F0;
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #CBD5E1;
+}
+
+/* Glassmorphism Panels */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 12px 30px -5px rgba(15, 23, 42, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.6);
+}
+
+.glass-panel-dark {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 35px -5px rgba(0, 0, 0, 0.5);
+}
+
+/* Modern Minimalist iOS Switch */
+.modern-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+.modern-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.modern-switch .switch-slider {
+  width: 32px;
+  height: 18px;
+  background-color: #E2E8F0;
+  border-radius: 999px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+.modern-switch .switch-slider::before {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  left: 2px;
+  top: 2px;
+  background-color: #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modern-switch input:checked + .switch-slider {
+  background-color: #E87722;
+}
+.modern-switch input:checked + .switch-slider::before {
+  transform: translateX(14px);
+}
+
+/* Subtle animations */
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.cursor-crosshair-map {
+  cursor: crosshair !important;
+}
+
+/* ==========================================================================
+   HIGH-CONTRAST SELECTS & INPUTS (FIX INVISIBLE TEXT ON WINDOWS BROWSERS)
+   ========================================================================== */
+select.select-dark {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+}
+#select-region-nav {
+  font-size: 12px !important;
+  color: #FFFFFF !important;
+  background-color: transparent !important;
+  border: none !important;
+  outline: none !important;
+}
+#select-region-nav option,
+#select-region-nav optgroup {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+  padding: 6px 12px !important;
+}
+
+select.select-light {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+}
+select.select-light option,
+select.select-light optgroup {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  padding: 6px 12px !important;
+}
+
+/* Global Select Options Fix for Native Windows Dropdown Menus */
+select option {
+  background-color: #1E293B;
+  color: #FFFFFF;
+}
+
+/* Hazard Filter Pill High-Contrast States */
+.hazard-filter-btn {
+  background-color: #FFFFFF;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.hazard-filter-btn:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+.hazard-filter-btn.active {
+  background-color: #1B2A4A !important;
+  color: #FFFFFF !important;
+  border-color: #1B2A4A !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(27, 42, 74, 0.25) !important;
+}
+
+/* Flood Sub-Filter Pill High-Contrast States */
+.flood-filter-pill {
+  background-color: #FFFFFF;
+  color: #1E293B;
+  border: 1px solid #CBD5E1;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.flood-filter-pill:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+.flood-filter-pill.active {
+  background-color: #0284C7 !important;
+  color: #FFFFFF !important;
+  border-color: #0284C7 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.3) !important;
+}
+
+/* Input Fields Crisp Contrast for Dark Mode Panel Interface */
+body.aegis-dark input[type="text"],
+body.aegis-dark input[type="number"],
+body.aegis-dark input[type="password"],
+body.aegis-dark input[type="email"],
+body.aegis-dark input[type="search"],
+body.aegis-dark select,
+body.aegis-dark textarea {
+  color: #F8FAFC !important;
+  caret-color: #38BDF8 !important;
+}
+
+body.aegis-dark input:-webkit-autofill,
+body.aegis-dark input:-webkit-autofill:hover,
+body.aegis-dark input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F8FAFC !important;
+  -webkit-box-shadow: 0 0 0px 1000px #0F172A inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748B !important;
+  opacity: 1 !important;
+}
+
+
+/* ============================================================================
+   ASGARD PANEL INTERFACE (DARK-MODE GEOSPATIAL SYSTEM) CUSTOM STYLES
+   Askrindo Geospatial Analytics for Risk Detection
+   ============================================================================ */
+
+:root {
+    --asgard-bg-deep: #0B1120;
+    --asgard-bg-panel: #0F172A;
+    --asgard-bg-card: #1E293B;
+    --asgard-border: #334155;
+    --asgard-text-main: #F8FAFC;
+    --asgard-text-muted: #94A3B8;
+    --asgard-blue: #2563EB;
+    --asgard-cyan: #06B6D4;
+
+    --aegis-bg-deep: #0B1120;
+    --aegis-bg-panel: #0F172A;
+    --aegis-bg-card: #1E293B;
+    --aegis-border: #334155;
+    --aegis-text-main: #F8FAFC;
+    --aegis-text-muted: #94A3B8;
+    --aegis-blue: #2563EB;
+    --aegis-cyan: #06B6D4;
+}
+
+body.asgard-dark,
+body.aegis-dark {
+    background-color: var(--asgard-bg-deep);
+    color: var(--asgard-text-main);
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Dark Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0F172A;
+}
+::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #475569;
+}
+
+/* Glass Dark Floating Panels */
+.asgard-panel,
+.aegis-panel {
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(51, 65, 85, 0.85);
+    color: #F8FAFC;
+}
+
+.asgard-card,
+.aegis-card {
+    background: rgba(30, 41, 59, 0.85);
+    border: 1px solid rgba(51, 65, 85, 0.8);
+    border-radius: 0.5rem;
+}
+
+/* NO DATA Striped Badge — Tegas Berbeda dari Risiko Rendah */
+.badge-nodata {
+    background: repeating-linear-gradient(
+        -45deg,
+        rgba(71, 85, 105, 0.35),
+        rgba(71, 85, 105, 0.35) 5px,
+        rgba(30, 41, 59, 0.65) 5px,
+        rgba(30, 41, 59, 0.65) 10px
+    );
+    border: 1px dashed #94A3B8;
+    color: #E2E8F0;
+}
+
+/* Leaflet Dark Popup Overrides (Matching PDF Page 3 & 7) */
+.leaflet-popup-content-wrapper {
+    background: #0F172A !important;
+    color: #F8FAFC !important;
+    border: 1px solid #334155 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5) !important;
+    padding: 0 !important;
+}
+
+.leaflet-popup-content {
+    margin: 0 !important;
+    width: 350px !important;
+}
+
+.leaflet-popup-tip {
+    background: #0F172A !important;
+    border: 1px solid #334155 !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+    color: #94A3B8 !important;
+    top: 8px !important;
+    right: 8px !important;
+}
+.leaflet-container a.leaflet-popup-close-button:hover {
+    color: #FFFFFF !important;
+}
+
+/* Custom Pie Cluster Marker */
+.aegis-cluster-marker {
+    background: transparent;
+    border: none;
+}
+
+/* Pulse animation for active earthquake or selected object */
+@keyframes aegisPulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.marker-pulse-red {
+    animation: aegisPulse 2s infinite;
+}
+
+/* Dropdown menu hover/open utilities */
+.nav-dropdown-menu {
+    display: none;
+}
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown.open .nav-dropdown-menu {
+    display: block;
+}
+
+
+/* ============================================================================
+   DARK GIS TILE FILTER FOR OPENSTREETMAP (ZERO API KEY WATERMARK)
+   ============================================================================ */
+.leaflet-container {
+    background-color: #0B1120 !important;
+}
+
+img.aegis-dark-tiles {
+    filter: invert(100%) hue-rotate(185deg) brightness(92%) contrast(92%) saturate(80%);
+}
